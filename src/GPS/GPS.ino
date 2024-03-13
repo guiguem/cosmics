@@ -13,7 +13,7 @@ This should be very precise, as we can record the pulse with one clock-cycle pre
 */
 
 
-#include <Adafruit_GPS.h>
+#include <Adafruit_GPS_new.h>
 
 void Startup();
 void Normal();
@@ -54,8 +54,8 @@ void setup() {
   
   Serial.begin(38400);
   GPS.begin(9600);//Start connection to GPS
-//   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCONLY); //Tell GPS we only need basic data
-//   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);   // 1 Hz update rate
+  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCONLY); //Tell GPS we only need basic data
+  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);   // 1 Hz update rate
 
   Serial.println("Waiting for GPS Fix");
 

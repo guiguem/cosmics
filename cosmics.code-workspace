@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"name": "cosmics",
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"softwareserial.h": "c",
+			"arduino.h": "c"
+		}
+	}
+}

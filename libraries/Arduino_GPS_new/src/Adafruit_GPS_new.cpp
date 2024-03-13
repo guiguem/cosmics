@@ -28,7 +28,7 @@
 */
 /**************************************************************************/
 
-#include <Adafruit_GPS.h>
+#include <Adafruit_GPS_new.h>
 
 static bool strStartsWith(const char *str, const char *prefix);
 
