@@ -5,11 +5,13 @@ The PPS signal must enter at pin SDA
 Pin restrictons arise from internal connections to timers on the board. 
 
 We use the only two timers (TCB0 and TCB1) that can record external events to 
-60ns precision. Timer TCB1 is used for the signal pulses and TCB0 is used for
+60ns precision. Timer TCB1 is used for the signal pulses (trigger) and TCB0 is used for
 listening to the PPS from the GPS. TCB2 keeps the time between PPS events. 
 
 Each time we get a PPS signal, we recompute the current clockspeed. 
 This should be very precise, as we can record the pulse with one clock-cycle precision.
+
+For more information, go https://ww1.microchip.com/downloads/en/DeviceDoc/ATmega4808-09-DataSheet-DS40002173C.pdf
 */
 
 
@@ -42,6 +44,7 @@ int hour;
 volatile long cyclesInSecond; //clockcycles we had last second
 volatile long CounterAtPPS;
 volatile long CounterNow;
+volatile long TCB1CNT_at_trigger; // 
 
 volatile unsigned long overflowCounter = 0; //Counts overflows in clock (every 4 ms this hapens)
 volatile float clkSpeed=62.5;//clockspeed in ns
@@ -63,7 +66,8 @@ void setup() {
   // set up clock counter:
   TCB2.CTRLB = 0; // Use timer compare mode
   TCB2.EVCTRL = 0; //Periodic interrupt mode
-  TCB2.CCMP = 65535; // set TOP (max is 2^16)
+  //TCB2.CCMP = 65535; // set TOP (max is 2^16)
+  TCB2.CCMP = 32767; // set TOP (2^15)
   TCB2.INTCTRL = 1; // Enable the interrupt
   TCB2.CTRLA = TCB_CLKSEL_CLKDIV1_gc | TCB_ENABLE_bm; // Use Timer as clock, enable timer
 
@@ -76,7 +80,7 @@ void setup() {
   EVSYS.CHANNEL5 = 0x4D; //set channel 5 to use PF5 to get events
   EVSYS.USERTCB1 = 6; //user is TCB1, connect to channel 5=6-1
   
-  TCB1.CTRLB = 2; // Use COE mode
+  TCB1.CTRLB = 2; // Use Capture On Event mode
   TCB1.EVCTRL = 1; //enable input capture event
   TCB1.INTCTRL = 1; // Enable the interrupt on capture event
   TCB1.CTRLA = TCB_CLKSEL_CLKDIV1_gc | TCB_ENABLE_bm; // Use Timer as clock, enable timer
@@ -154,7 +158,9 @@ void CheckPulse(){
 ISR(TCB1_INT_vect){
   //Interrupt ISR for the signals from the detectors
   if (EventFlag==false){ //only record if we have lowered flag from last event
-    EventNanosec = (overflowCounter * TCB2.CCMP + TCB1.CCMP)*clkSpeed; //#cylces times clockspeed (since second ticked over)
+    // EventNanosec = (overflowCounter * TCB2.CCMP + TCB1.CCMP)*clkSpeed; //#cylces times clockspeed (since second ticked over)
+    EventNanosec = NanosecondsNow();
+    //TCB1CNT_at_trigger = TCB1.CNT;
     EventSec=second;
     EventFlag=true; //raise flag
   }
@@ -162,16 +168,18 @@ ISR(TCB1_INT_vect){
 }
 
 unsigned long NanosecondsNow(){
-  return (overflowCounter * TCB1.CCMP + TCB1.CNT)*clkSpeed;
+  TCB1CNT_at_trigger = TCB1.CNT;
+  return (overflowCounter * TCB2.CCMP + TCB1CNT_at_trigger)*clkSpeed;
 }
 
 
 ISR(TCB0_INT_vect){ //PPSfunc
   //called every sec by GPS
   CounterAtPPS = TCB0.CCMP;
-  cyclesInSecond = overflowCounter * TCB2.CCMP + CounterAtPPS; //How many cycles passed since last PPS event
-  clkSpeed=1e9/cyclesInSecond; //Recompute clockspeed (in ns)
   CounterNow = TCB2.CNT;
+  cyclesInSecond = overflowCounter * TCB2.CCMP + CounterNow; //How many cycles passed since last PPS event
+  //clkSpeed=1e9/cyclesInSecond; //Recompute clockspeed (in ns)
+  //CounterNow = TCB2.CNT;
   TCB2.CNT=TCB2.CNT-CounterNow; //reset counters so that ther are zero at PPS
   TCB1.CNT=TCB2.CNT;
   TCB0.CNT=TCB2.CNT;
@@ -184,6 +192,8 @@ ISR(TCB0_INT_vect){ //PPSfunc
 }
 
 ISR(TCB2_INT_vect){ //Call when we reach TOP
+  CounterNow = TCB2.CNT;
+  TCB2.CNT=TCB2.CNT-CounterNow;
   TCB1.CNT=TCB2.CNT; //keep other in synch
   TCB0.CNT=TCB2.CNT;
   overflowCounter+=1; //We overflowed
@@ -242,6 +252,11 @@ void printTime(unsigned long sec,unsigned long nanosec, bool printDate){
     Serial.print("0");
   }
   Serial.print(PrintNanosecond); Serial.print(':');
+  Serial.print(cyclesInSecond); Serial.print(':');
+  Serial.print(overflowCounter); Serial.print(':');
+  Serial.print(TCB1CNT_at_trigger); Serial.print(':');
+  Serial.print(CounterNow); Serial.print(':');
+  Serial.print(cyclesInSecond-CounterNow); Serial.print(':'); // Mat
   
   if (printDate){
     Serial.print(";Date:");
