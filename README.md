@@ -19,4 +19,9 @@ Quelques fichiers pour tester l'Arduino et la Ultimate GPS breakout.
 - Ouvrir dans VSCode
 - Faire "Build" puis "Upload"
 - Ouvrir le "Serial Monitor" intégré
-- Si ne marche pas, il faut peut être r
+
+## Enregistrer la sortie série dans un fichier
+
+- Install `pyserial` via `python3 -m pip install pyserial`
+- Éditer le script log.py en changeant notamment le port série et le nom du fichier de sortie
+- Exécuter `python3 log.py`
