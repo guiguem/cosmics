@@ -158,8 +158,7 @@ void CheckPulse(){
 ISR(TCB1_INT_vect){
   //Interrupt ISR for the signals from the detectors
   if (EventFlag==false){ //only record if we have lowered flag from last event
-    // EventNanosec = (overflowCounter * TCB2.CCMP + TCB1.CCMP)*clkSpeed; //#cylces times clockspeed (since second ticked over)
-    EventNanosec = NanosecondsNow();
+    EventNanosec = (overflowCounter * TCB2.CCMP + TCB1.CCMP)*clkSpeed; //#cylces times clockspeed (since second ticked over)
     //TCB1CNT_at_trigger = TCB1.CNT;
     EventSec=second;
     EventFlag=true; //raise flag
@@ -168,8 +167,7 @@ ISR(TCB1_INT_vect){
 }
 
 unsigned long NanosecondsNow(){
-  TCB1CNT_at_trigger = TCB1.CNT;
-  return (overflowCounter * TCB2.CCMP + TCB1CNT_at_trigger)*clkSpeed;
+  return (overflowCounter * TCB2.CCMP + TCB1.CNT)*clkSpeed;
 }
 
 
